@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Scratch-Off Case Game</title>
+
+  <style>
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: #111;
+      font-family: Arial, sans-serif;
+    }
+
+    #scratchGame {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 12px;
+      box-sizing: border-box;
+      text-align: center;
+      color: white;
+    }
+
+    #scratchGame h2 {
+      margin: 8px 0 4px 0;
+      font-size: 28px;
+    }
+
+    #scratchGame p {
+      margin-top: 0;
+      margin-bottom: 14px;
+      color: #ddd;
+      font-size: 16px;
+    }
+
+    #resetBtn {
+      margin-bottom: 16px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #333;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    #resetBtn:hover {
+      background: #444;
+    }
+
+    #scratchGrid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 10px;
+      box-sizing: border-box;
+    }
+
+    .scratch-card {
+      position: relative;
+      height: 120px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #1b2638;
+      border: 2px solid #333;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+      user-select: none;
+      touch-action: none;
+    }
+
+    .secret-content {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      background: #192638;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px;
+      box-sizing: border-box;
+    }
+
+    .secret-content img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .scratch-canvas {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      cursor: grab;
+    }
+
+    .revealed .scratch-canvas {
+      display: none;
+    }
+
+    @media (max-width: 1100px) {
+      #scratchGrid {
+        grid-template-columns: repeat(6, 1fr);
+      }
+
+      .scratch-card {
+        height: 115px;
+      }
+    }
+
+    @media (max-width: 750px) {
+      #scratchGrid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .scratch-card {
+        height: 105px;
+      }
+    }
+
+    @media (max-width: 450px) {
+      #scratchGrid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .scratch-card {
+        height: 100px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="scratchGame">
+    <h2>Scratch-Off Case Game</h2>
+    <p>Scratch each square to reveal the hidden case.</p>
+
+    <button id="resetBtn">Reset / Randomize Game</button>
+
+    <div id="scratchGrid"></div>
+  </div>
+
+  <script>
+    const options = [
+      {
+        label: "AMG",
+        imageUrl: "images/AMG.png"
+      },
+      {
+        label: "Chroma 1",
+        imageUrl: "images/Chroma 1.png"
+      },
+      {
+        label: "Chroma 2",
+        imageUrl: "images/Chroma 2.png"
+      },
+      {
+        label: "Chroma 3",
+        imageUrl: "images/Chroma 3.png"
+      },
+      {
+        label: "DreamsAndNight",
+        imageUrl: "images/DreamsAndNight.png"
+      },
+      {
+        label: "Gamma 2",
+        imageUrl: "images/Gamma 2.png"
+      },
+      {
+        label: "Phoenix",
+        imageUrl: "images/Phoenix.png"
+      },
+      {
+        label: "Prisma 2",
+        imageUrl: "images/Prisma 2.png"
+      },
+      {
+        label: "Prisma",
+        imageUrl: "images/Prisma.png"
+      },
+      {
+        label: "Revolution",
+        imageUrl: "images/Revolution.png"
+      },
+      {
+        label: "Revolver",
+        imageUrl: "images/Revolver.png"
+      },
+      {
+        label: "Spectrum 2",
+        imageUrl: "images/Spectrum 2.png"
+      },
+      {
+        label: "Starfy2",
+        imageUrl: "images/Starfy2.png"
+      },
+      {
+        label: "Vanguard",
+        imageUrl: "images/Vanguard.png"
+      }
+    ];
+
+    const grid = document.getElementById("scratchGrid");
+    const resetBtn = document.getElementById("resetBtn");
+
+    function shuffleArray(array) {
+      const shuffled = [...array];
+
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const randomIndex = Math.floor(Math.random() * (i + 1));
+        const temporaryValue = shuffled[i];
+
+        shuffled[i] = shuffled[randomIndex];
+        shuffled[randomIndex] = temporaryValue;
+      }
+
+      return shuffled;
+    }
+
+    function createGame() {
+      grid.innerHTML = "";
+
+      const shuffledOptions = shuffleArray(options);
+
+      shuffledOptions.forEach((item, index) => {
+        const card = document.createElement("div");
+        card.className = "scratch-card";
+
+        const secret = document.createElement("div");
+        secret.className = "secret-content";
+
+        const image = document.createElement("img");
+        image.src = item.imageUrl;
+        image.alt = item.label;
+
+        secret.appendChild(image);
+
+        const canvas = document.createElement("canvas");
+        canvas.className = "scratch-canvas";
+
+        card.appendChild(secret);
+        card.appendChild(canvas);
+        grid.appendChild(card);
+
+        setupScratchCard(canvas, card, index + 1);
+      });
+    }
+
+    function setupScratchCard(canvas, card, number) {
+      const ctx = canvas.getContext("2d");
+      let isScratching = false;
+
+      function sizeCanvas() {
+        const rect = card.getBoundingClientRect();
+
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        drawCover();
+      }
+
+      function drawCover() {
+        const w = canvas.width;
+        const h = canvas.height;
+
+        ctx.globalCompositeOperation = "source-over";
+
+        const gradient = ctx.createLinearGradient(0, 0, w, h);
+        gradient.addColorStop(0, "#eeeeee");
+        gradient.addColorStop(0.35, "#b8b8b8");
+        gradient.addColorStop(0.65, "#8f8f8f");
+        gradient.addColorStop(1, "#f6f6f6");
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = "rgba(255,255,255,0.35)";
+
+        for (let i = -w; i < w * 2; i += 24) {
+          ctx.save();
+          ctx.translate(i, 0);
+          ctx.rotate(-0.35);
+          ctx.fillRect(0, 0, 10, h * 2);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = "#333";
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("SCRATCH", w / 2, h / 2 - 8);
+
+        ctx.font = "13px Arial";
+        ctx.fillText("Box " + number, w / 2, h / 2 + 16);
+      }
+
+      function getPoint(event) {
+        const rect = canvas.getBoundingClientRect();
+
+        return {
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top
+        };
+      }
+
+      function scratch(event) {
+        if (!isScratching) return;
+
+        event.preventDefault();
+
+        const point = getPoint(event);
+
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 22, 0, Math.PI * 2);
+        ctx.fill();
+
+        checkRevealAmount();
+      }
+
+      function checkRevealAmount() {
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+
+        let clearPixels = 0;
+        let totalPixelsChecked = 0;
+
+        for (let i = 3; i < pixels.length; i += 16) {
+          totalPixelsChecked++;
+
+          if (pixels[i] === 0) {
+            clearPixels++;
+          }
+        }
+
+        const percentClear = clearPixels / totalPixelsChecked;
+
+        if (percentClear > 0.45) {
+          card.classList.add("revealed");
+        }
+      }
+
+      canvas.addEventListener("pointerdown", function(event) {
+        isScratching = true;
+        scratch(event);
+      });
+
+      canvas.addEventListener("pointermove", scratch);
+
+      canvas.addEventListener("pointerup", function() {
+        isScratching = false;
+      });
+
+      canvas.addEventListener("pointerleave", function() {
+        isScratching = false;
+      });
+
+      window.addEventListener("resize", sizeCanvas);
+
+      setTimeout(sizeCanvas, 50);
+    }
+
+    resetBtn.addEventListener("click", createGame);
+
+    createGame();
+  </script>
+</body>
+</html>
